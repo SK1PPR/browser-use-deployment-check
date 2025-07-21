@@ -5,6 +5,7 @@ import os
 import asyncio
 from prompts import *
 from config import COLUMN_RATIOS, APP_TITLE
+from browser import execute_workflow, cleanup_screenshots
 
 class UIComponents:
     """Manages all UI components and layouts."""
@@ -86,9 +87,8 @@ class UIComponents:
                     st.session_state['agent_ran'] = False
                     
                     with st.spinner("Breaking down your request into steps..."):
-                        from agent_manager import AgentManager
-                        agent_manager = AgentManager()
-                        steps = asyncio.run(agent_manager.break_down_prompt(user_input))
+                        from agent_manager import break_down_prompt
+                        steps = asyncio.run(break_down_prompt(user_input))
                         st.session_state['workflow_steps'] = steps
                     st.rerun()
                 else:
@@ -194,9 +194,8 @@ class UIComponents:
                 if st.button(APPROVE_RUN_BUTTON, type="primary", use_container_width=True):
                     # Combine steps into a comprehensive prompt
                     with st.spinner("Combining steps into execution prompt..."):
-                        from agent_manager import AgentManager
-                        agent_manager = AgentManager()
-                        combined_prompt = asyncio.run(agent_manager.combine_steps_into_prompt(
+                        from agent_manager import combine_steps_into_prompt
+                        combined_prompt = asyncio.run(combine_steps_into_prompt(
                             st.session_state['current_prompt'], 
                             st.session_state['edited_steps']
                         ))
@@ -306,9 +305,7 @@ class UIComponents:
                     st.session_state['screenshot_placeholder'].empty()
                 
                 # Clean up screenshots
-                from agent_manager import AgentManager
-                agent_manager = AgentManager()
-                agent_manager.cleanup_screenshots()
+                cleanup_screenshots()
                 
                 # Show initial status
                 st.info(WORKFLOW_STARTING)
@@ -318,7 +315,7 @@ class UIComponents:
                 
                 # Run agent with timeout protection
                 try:
-                    asyncio.run(agent_manager.execute_workflow(
+                    asyncio.run(execute_workflow(
                         execution_prompt, 
                         st.session_state['thoughts_placeholder'], 
                         st.session_state['screenshot_placeholder']

@@ -13,15 +13,6 @@ INITIAL_SIDEBAR_STATE = "collapsed"
 
 # --------- LLM Configuration ---------
 LLM_MODEL = "gpt-4o"
-LLM_TEMPERATURE = 0.0
-
-# --------- Browser Configuration ---------
-BROWSER_HEADLESS = False
-BROWSER_KEEP_ALIVE = True
-BROWSER_CONFIG = {
-    "keep_alive": True,
-    "headless": False
-}
 
 # --------- Initial Actions ---------
 INITIAL_ACTIONS = [

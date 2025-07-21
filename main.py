@@ -10,7 +10,6 @@ from config import *
 from prompts import *
 from session_manager import SessionManager
 from ui_components import UIComponents
-from agent_manager import AgentManager
 
 # Allow nested async loops
 nest_asyncio.apply()
