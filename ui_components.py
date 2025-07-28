@@ -4,7 +4,7 @@ import streamlit as st
 import os
 import asyncio
 from prompts import *
-from config import COLUMN_RATIOS, APP_TITLE
+from config import COLUMN_RATIOS, APP_TITLE, get_env_var
 from browser import execute_workflow, cleanup_screenshots
 
 class UIComponents:
@@ -18,6 +18,50 @@ class UIComponents:
             layout="wide",
             initial_sidebar_state="collapsed"
         )
+    
+    @staticmethod
+    def authenticate_user():
+        """Display the user authentication form."""
+        st.title(LOGIN_WELCOME)
+        st.markdown(LOGIN_INSTRUCTIONS)
+        
+        # Get environment variables for authentication
+        env_username = get_env_var('APP_USERNAME')
+        env_password = get_env_var('APP_PASSWORD')
+        
+        if not env_username or not env_password:
+            st.error("Authentication not configured. Please set APP_USERNAME and APP_PASSWORD environment variables.")
+            return
+        
+        with st.form("login_form"):
+            st.subheader(LOGIN_HEADER)
+            
+            username = st.text_input(
+                LOGIN_USERNAME_LABEL, 
+                type="default", 
+                help=LOGIN_USERNAME_HELP
+            )
+            password = st.text_input(
+                LOGIN_PASSWORD_LABEL, 
+                type="password", 
+                help=LOGIN_PASSWORD_HELP
+            )
+            
+            submitted = st.form_submit_button(LOGIN_BUTTON)
+            
+            if submitted:
+                if username == env_username and password == env_password:
+                    st.session_state['authenticated'] = True
+                    st.session_state['login_error'] = ""
+                    st.success(LOGIN_SUCCESS)
+                    st.rerun()
+                else:
+                    st.session_state['login_error'] = LOGIN_ERROR
+                    st.error(LOGIN_ERROR)
+        
+        # Show error message if login failed
+        if st.session_state.get('login_error'):
+            st.error(st.session_state['login_error'])
     
     @staticmethod
     def credentials_setup():
@@ -64,9 +108,16 @@ class UIComponents:
             st.session_state['sensitive_data'] = {}
             st.rerun()
         
+        if st.sidebar.button(LOGOUT_BUTTON):
+            st.session_state['authenticated'] = False
+            st.session_state['credentials_configured'] = False
+            st.session_state['sensitive_data'] = {}
+            st.session_state['login_error'] = ""
+            st.rerun()
+        
         # Show current email in sidebar
         if st.session_state['sensitive_data']:
-            st.sidebar.info(f"Logged in as: {st.session_state['sensitive_data'].get('email', 'Unknown')}")
+            st.sidebar.info(f"Screener.in: {st.session_state['sensitive_data'].get('email', 'Unknown')}")
 
         # Centered input section
         col1, col2, col3 = st.columns(COLUMN_RATIOS['main'])
@@ -247,6 +298,13 @@ class UIComponents:
                 st.session_state['sensitive_data'] = {}
                 st.rerun()
             
+            if st.button(LOGOUT_BUTTON):
+                st.session_state['authenticated'] = False
+                st.session_state['credentials_configured'] = False
+                st.session_state['sensitive_data'] = {}
+                st.session_state['login_error'] = ""
+                st.rerun()
+            
             if st.button(RESET_WORKFLOW):
                 st.session_state['workflow_steps'] = []
                 st.session_state['workflow_approved'] = False
@@ -264,7 +322,7 @@ class UIComponents:
             
             # Show current email in sidebar
             if st.session_state['sensitive_data']:
-                st.info(f"Logged in as: {st.session_state['sensitive_data'].get('email', 'Unknown')}")
+                st.info(f"Screener.in: {st.session_state['sensitive_data'].get('email', 'Unknown')}")
         
         # Show approved workflow info
         st.success(f"✅ **Approved Workflow:** {st.session_state['current_prompt']}")
@@ -276,33 +334,13 @@ class UIComponents:
                 st.text_area("", value=st.session_state['combined_prompt'], height=150, disabled=True)
                 st.info(EXECUTION_PROMPT_DESCRIPTION)
         
-        # Debug information - minimal to avoid React errors
-        if st.checkbox("🔧 Show Debug Info"):
-            st.markdown(f"### {DEBUG_TITLE}")
-            
-            # Only show basic info to avoid session state issues
-            st.markdown(f"**{DEBUG_ENVIRONMENT}**")
-            st.markdown(f"- {DEBUG_WORKING_DIR.format(dir=os.getcwd())}")
-            st.markdown(f"- {DEBUG_SCREENSHOTS_EXIST.format(exists=os.path.exists('screenshots'))}")
-            
-            # Simple browser test without complex state
-            if st.button(DEBUG_BROWSER_TEST):
-                st.info(DEBUG_BROWSER_TESTING)
-                st.success("Browser test initiated!")
-        
-        # Execute workflow button
-        if st.button(EXECUTE_WORKFLOW_BUTTON, type="primary", use_container_width=True):
-            try:
-                # Reset state
+            # Execute workflow button
+            if st.button(EXECUTE_WORKFLOW_BUTTON, type="primary", use_container_width=True):
+                # Reset state for new run
                 st.session_state['agent_ran'] = False
                 st.session_state['agent_error'] = False
                 st.session_state['latest_thoughts'] = ''
-                
-                # Clear placeholders
-                if 'thoughts_placeholder' in st.session_state:
-                    st.session_state['thoughts_placeholder'].empty()
-                if 'screenshot_placeholder' in st.session_state:
-                    st.session_state['screenshot_placeholder'].empty()
+                st.session_state['step_counter'] = {'n': 0}
                 
                 # Clean up screenshots
                 cleanup_screenshots()
@@ -314,23 +352,7 @@ class UIComponents:
                 execution_prompt = st.session_state.get('combined_prompt', st.session_state['current_prompt'])
                 
                 # Run agent with timeout protection
-                try:
-                    asyncio.run(execute_workflow(
-                        execution_prompt, 
-                        st.session_state['thoughts_placeholder'], 
-                        st.session_state['screenshot_placeholder']
-                    ))
-                except Exception as e:
-                    st.error(ERROR_RUN_AGENT.format(error=e))
-                    print(ERROR_RUN_AGENT.format(error=e))
-                    st.session_state['agent_ran'] = False
-                    st.session_state['agent_error'] = True
-                    
-            except Exception as e:
-                st.error(ERROR_START_WORKFLOW.format(error=e))
-                print(ERROR_START_WORKFLOW.format(error=e))
-                st.session_state['agent_ran'] = False
-                st.session_state['agent_error'] = True
+                asyncio.run(execute_workflow(execution_prompt))
 
         col1, col2 = st.columns(COLUMN_RATIOS['workflow'])
 
@@ -338,31 +360,22 @@ class UIComponents:
         with col1:
             st.subheader(AGENT_THOUGHTS_HEADER)
 
-            # Create a placeholder for live thoughts
-            if 'thoughts_placeholder' not in st.session_state:
-                st.session_state['thoughts_placeholder'] = st.empty()
-            else:
-                # Clear the placeholder if not running
-                if not st.session_state.get('agent_ran', False):
-                    st.session_state['thoughts_placeholder'].empty()
-            
-            # Static fallback below
+            # Show thoughts with live updates
             if st.session_state['latest_thoughts']:
-                with st.expander("Agent's Thoughts (History)", expanded=True):
+                with st.expander("Agent's Live Actions", expanded=True):
                     st.markdown(st.session_state['latest_thoughts'])
+                    
+                    # Show current status
+                    if st.session_state.get('agent_ran', False):
+                        current_step = st.session_state.get('step_counter', {}).get('n', 0)
+                        st.success(f"🔄 Agent is currently running... (Step {current_step})")
             else:
-                st.info("Thoughts will appear here after agent runs.")
+                st.info("Agent actions will appear here as they happen.")
 
         # Right Column - Browser Screenshot
         with col2:
             st.subheader(BROWSER_SCREENSHOT_HEADER)
-            # Screenshot will be shown live via the placeholder
-            if 'screenshot_placeholder' not in st.session_state:
-                st.session_state['screenshot_placeholder'] = st.empty()
-            else:
-                if not st.session_state.get('agent_ran', False):
-                    st.session_state['screenshot_placeholder'].empty()
-            st.session_state['screenshot_placeholder'].info("Run the agent to generate a screenshot.")
+            st.info("Run the agent to generate a screenshot.")
 
             # After agent completes, show a slider to browse all screenshots
             if st.session_state.get('agent_ran', False):

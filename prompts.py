@@ -50,16 +50,28 @@ IMPORTANT: The agent should NOT close the browser automatically. It should keep 
 Combined Prompt:
 """
 
+# --------- Authentication Messages ---------
+LOGIN_WELCOME = "🔐 Welcome to Screener.in Workflow Automator"
+LOGIN_INSTRUCTIONS = "Please log in to access the stock screening automation system."
+LOGIN_HEADER = "User Authentication"
+LOGIN_USERNAME_LABEL = "Username"
+LOGIN_USERNAME_HELP = "Enter your username"
+LOGIN_PASSWORD_LABEL = "Password"
+LOGIN_PASSWORD_HELP = "Enter your password"
+LOGIN_BUTTON = "Login"
+LOGIN_ERROR = "Invalid username or password. Please try again."
+LOGIN_SUCCESS = "Login successful! Welcome to the system."
+
 # --------- Credentials Setup Messages ---------
-CREDENTIALS_WELCOME = "🔐 Welcome to Workflow Automator"
-CREDENTIALS_INSTRUCTIONS = "Please configure your credentials to get started."
-CREDENTIALS_HEADER = "Enter Your Credentials"
-CREDENTIALS_EMAIL_LABEL = "Email Address"
-CREDENTIALS_EMAIL_HELP = "Enter your email address for the platform"
-CREDENTIALS_PASSWORD_LABEL = "Password"
-CREDENTIALS_PASSWORD_HELP = "Enter your password"
-CREDENTIALS_SAVE_BUTTON = "Save Credentials"
-CREDENTIALS_SUCCESS = "Credentials saved successfully! You can now use the app."
+CREDENTIALS_WELCOME = "🔐 Welcome to Screener.in Workflow Automator"
+CREDENTIALS_INSTRUCTIONS = "Please configure your Screener.in credentials to get started with stock screening automation."
+CREDENTIALS_HEADER = "Enter Your Screener.in Credentials"
+CREDENTIALS_EMAIL_LABEL = "Screener.in Email Address"
+CREDENTIALS_EMAIL_HELP = "Enter your email address used for Screener.in account"
+CREDENTIALS_PASSWORD_LABEL = "Screener.in Password"
+CREDENTIALS_PASSWORD_HELP = "Enter your password for Screener.in account"
+CREDENTIALS_SAVE_BUTTON = "Save Screener.in Credentials"
+CREDENTIALS_SUCCESS = "Screener.in credentials saved successfully! You can now use the stock screening automation."
 CREDENTIALS_ERROR = "Please fill in all required fields."
 
 # --------- UI Messages ---------
@@ -110,7 +122,8 @@ DEBUG_BROWSER_FAILED = "Browser test failed: {error}"
 
 # --------- Navigation Messages ---------
 BACK_TO_INPUT = "← Back to Input"
-RECONFIGURE_CREDENTIALS = "🔧 Reconfigure Credentials"
+RECONFIGURE_CREDENTIALS = "🔧 Reconfigure Screener.in Credentials"
+LOGOUT_BUTTON = "🚪 Logout"
 RESET_WORKFLOW = "🔄 Reset Workflow"
 BACK_TO_STEP_BREAKDOWN = "← Back to Step Breakdown"
 ADD_NEW_STEP = "➕ Add New Step"

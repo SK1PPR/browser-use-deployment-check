@@ -21,17 +21,22 @@ SessionManager.initialize_session_state()
 UIComponents.setup_page()
 
 # --------- Main App Logic ---------
-if not st.session_state['credentials_configured']:
-    UIComponents.credentials_setup()
+# Check authentication first
+if not st.session_state['authenticated']:
+    UIComponents.authenticate_user()
 else:
-    # --------- Full Screen Step Breakdown View ---------
-    if st.session_state['workflow_steps'] and not st.session_state['workflow_approved']:
-        UIComponents.step_breakdown_view()
-    
-    # --------- Workflow Execution View ---------
-    elif st.session_state['show_workflow_view']:
-        UIComponents.workflow_execution_view()
-    
-    # --------- Initial Input View ---------
+    # Check for Screener.in credentials setup
+    if not st.session_state['credentials_configured']:
+        UIComponents.credentials_setup()
     else:
-        UIComponents.initial_input_view() 
+        # --------- Full Screen Step Breakdown View ---------
+        if st.session_state['workflow_steps'] and not st.session_state['workflow_approved']:
+            UIComponents.step_breakdown_view()
+        
+        # --------- Workflow Execution View ---------
+        elif st.session_state['show_workflow_view']:
+            UIComponents.workflow_execution_view()
+        
+        # --------- Initial Input View ---------
+        else:
+            UIComponents.initial_input_view() 

@@ -44,14 +44,6 @@ class SessionManager:
             if key in st.session_state:
                 st.session_state[key] = SESSION_KEYS.get(key, False)
     
-    @staticmethod
-    def clear_placeholders():
-        """Clear UI placeholders."""
-        placeholder_keys = ['thoughts_placeholder', 'screenshot_placeholder']
-        
-        for key in placeholder_keys:
-            if key in st.session_state:
-                st.session_state[key].empty()
     
     @staticmethod
     def get_session_info():

@@ -30,6 +30,8 @@ STEP_SCREENSHOT_FORMAT = 'step_{}.png'
 
 # --------- Session State Keys ---------
 SESSION_KEYS = {
+    'authenticated': False,
+    'login_error': "",
     'latest_thoughts': "",
     'agent_ran': False,
     'credentials_configured': False,

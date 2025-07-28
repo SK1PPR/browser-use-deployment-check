@@ -1,5 +1,6 @@
-from browser_use import Agent
+from browser_use import Agent, BrowserSession, BrowserProfile
 import os
+import base64
 from langchain_openai import ChatOpenAI
 from config import LLM_MODEL, INITIAL_ACTIONS
 from prompts import AGENT_RUNNING, AGENT_COMPLETED
@@ -7,6 +8,8 @@ import streamlit as st
 import shutil
 
 llm = ChatOpenAI(model=LLM_MODEL)
+
+custom_browser_profile = BrowserProfile(headless=False, viewport=(1366, 768))
 
 async def on_step_start_hook(agent: Agent):
     """Hook function that captures and records agent activity at each step start."""
@@ -20,38 +23,58 @@ async def on_step_start_hook(agent: Agent):
     st.session_state['step_counter']['n'] = step_num
 
     # Capture screenshot
-    website_screenshot = await agent.browser_session.take_screenshot()
+    try:
+        website_screenshot = await agent.browser_session.take_screenshot()
+        
+        # Save screenshot to file - decode base64 string to bytes
+        screenshot_path = os.path.join(screenshots_dir, f"step_{step_num}.png")
+        screenshot_bytes = base64.b64decode(website_screenshot)
+        with open(screenshot_path, "wb") as f:
+            f.write(screenshot_bytes)
+    except Exception as e:
+        print(f"Error taking screenshot: {e}")
+        # Continue without screenshot
 
-    # Save screenshot to file
-    screenshot_path = os.path.join(screenshots_dir, f"step_{step_num}.png")
-    with open(screenshot_path, "wb") as f:
-        f.write(website_screenshot)
-
-    if 'screenshot_placeholder' in st.session_state:
-        st.session_state['screenshot_placeholder'].image(
-            website_screenshot, caption=f"Step {step_num} Screenshot", use_column_width=True
-        )
+    # Get the current action being performed
+    try:
+        thoughts = agent.state.history.model_thoughts()
+        if thoughts and len(thoughts) > 0:
+            current_action = thoughts[-1].next_goal
+        else:
+            current_action = "Starting step"
+    except Exception as e:
+        print(f"Error getting current action: {e}")
+        current_action = "Starting step"
+    
+    # Update session state with live action
+    if 'latest_thoughts' not in st.session_state:
+        st.session_state['latest_thoughts'] = ""
+    
+    # Add new step action to thoughts with timestamp
+    step_action = f"**Step {step_num} Started:** {current_action}\n\n"
+    st.session_state['latest_thoughts'] += step_action
+    
 
 async def on_step_end_hook(agent: Agent):
     """Hook function that captures and records agent activity at each step end."""
 
     # Get step number from session state
     step_counter = st.session_state.get('step_counter', {'n': 0})
-    step_num = step_counter['n'] + 1
+    step_num = step_counter['n']
     st.session_state['step_counter']['n'] = step_num
 
     # Capture screenshot
-    website_screenshot = await agent.browser_session.take_screenshot()
-
-    # Save screenshot to file
-    screenshot_path = os.path.join('screenshots', f"step_{step_num}.png")
-    with open(screenshot_path, "wb") as f:
-        f.write(website_screenshot)
-
-    if 'screenshot_placeholder' in st.session_state:
-        st.session_state['screenshot_placeholder'].image(
-            website_screenshot, caption=f"Step {step_num} Screenshot", use_column_width=True
-        )
+    try:
+        website_screenshot = await agent.browser_session.take_screenshot()
+        
+        # Save screenshot to file - decode base64 string to bytes
+        screenshot_path = os.path.join('screenshots', f"step_{step_num}.png")
+        screenshot_bytes = base64.b64decode(website_screenshot)
+        with open(screenshot_path, "wb") as f:
+            f.write(screenshot_bytes)
+    except Exception as e:
+        print(f"Error taking screenshot: {e}")
+        # Continue without screenshot
 
     st.session_state['step_counter']['n'] = step_num
 
@@ -63,7 +86,7 @@ def cleanup_screenshots():
         os.makedirs(screenshots_dir, exist_ok=True)
         st.session_state['step_counter'] = {'n': 0} 
 
-async def execute_workflow(query, thoughts_placeholder, screenshot_placeholder):
+async def execute_workflow(query):
     """Execute the workflow using the browser automation agent."""
 
     # Create agent with simplified configuration
@@ -76,26 +99,14 @@ async def execute_workflow(query, thoughts_placeholder, screenshot_placeholder):
                 'password': st.session_state['sensitive_data']['password']
             }
         },
-        initial_actions=INITIAL_ACTIONS
+        initial_actions=INITIAL_ACTIONS,
+        browser_profile=custom_browser_profile
     )
 
-    # Run agent with simple approach
-    print(f"\n🚀 Running the task: {query}\n")
+    # Initialize session state for live updates
+    if 'latest_thoughts' not in st.session_state:
+        st.session_state['latest_thoughts'] = ""
+    st.session_state['agent_ran'] = True
     
-    # Update UI before starting
-    with thoughts_placeholder.expander("Agent Status", expanded=True):
-        st.markdown(f"**{AGENT_RUNNING}**")
-        st.markdown(f"**Task:** {query}")
-    
-    # Simple agent run without complex callbacks
-    result = await agent.run()
-    
-    # Update UI after completion
-    with thoughts_placeholder.expander("Agent Status", expanded=True):
-        st.markdown(f"**{AGENT_COMPLETED}**")
-        st.markdown(f"**Task:** {query}")
-    
-    # Show extracted content if available
-    if hasattr(result, 'extracted_content') and result.extracted_content():
-        with thoughts_placeholder.expander("Extracted Content", expanded=True):
-            st.markdown(result.extracted_content())
+    result = await agent.run(on_step_start=on_step_start_hook, on_step_end=on_step_end_hook)
+    return result

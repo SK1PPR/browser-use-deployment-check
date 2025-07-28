@@ -1,6 +1,22 @@
-# Workflow Automator - Modular Version
+# Screener.in Workflow Automator - Modular Version
 
-A Streamlit application that automates workflows by breaking down user prompts into actionable steps using an LLM, showing these steps for user approval, and then running a browser automation agent.
+A Streamlit application that automates stock screening workflows by breaking down user prompts into actionable steps using an LLM, showing these steps for user approval, and then running a browser automation agent for Screener.in.
+
+## 🔐 Authentication
+
+The application requires user authentication before accessing the stock screening features. Set the following environment variables:
+
+```bash
+# Required: User authentication
+APP_USERNAME=your_username_here
+APP_PASSWORD=your_password_here
+
+# Optional: Debug configuration
+DEBUG_MODE=False
+LOG_LEVEL=INFO
+```
+
+## 📁 Project Structure
 
 ## 📁 Project Structure
 
@@ -83,6 +99,22 @@ server/
 
 ## 🚀 Usage
 
+### Setup
+
+1. **Set environment variables** for authentication:
+   ```bash
+   export APP_USERNAME=your_username_here
+   export APP_PASSWORD=your_password_here
+   ```
+
+2. **Create a .env file** (optional but recommended):
+   ```bash
+   APP_USERNAME=your_username_here
+   APP_PASSWORD=your_password_here
+   DEBUG_MODE=False
+   LOG_LEVEL=INFO
+   ```
+
 ### Running the Application
 
 1. **Use the modular version** (recommended):
@@ -94,6 +126,12 @@ server/
    ```bash
    streamlit run main.py
    ```
+
+### Authentication Flow
+
+1. **Login Page**: Users must authenticate with username/password from environment variables
+2. **Screener.in Setup**: After authentication, users configure their Screener.in credentials
+3. **Workflow Automation**: Users can then use the stock screening automation features
 
 ### Modifying Prompts
 
