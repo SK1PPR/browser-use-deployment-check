@@ -9,7 +9,7 @@ import shutil
 
 llm = ChatOpenAI(model=LLM_MODEL)
 
-custom_browser_profile = BrowserProfile(headless=False, viewport=(1366, 768))
+custom_browser_profile = BrowserProfile(headless=False)
 
 async def on_step_start_hook(agent: Agent):
     """Hook function that captures and records agent activity at each step start."""
