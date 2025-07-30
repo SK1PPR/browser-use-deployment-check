@@ -67,10 +67,15 @@ if platform.system() == 'Darwin':  # macOS
     local_cache_path = '/Users/khushalagrawal/Library/Caches/ms-playwright'
     if os.path.exists(local_cache_path):
         os.environ.setdefault('PLAYWRIGHT_BROWSERS_PATH', local_cache_path)
-else:
-    # On cloud deployments (Linux), use default paths
-    # Let Playwright manage its own browser installation
-    pass
+elif platform.system() == 'Linux':
+    # On Linux (cloud deployment), set specific paths
+    os.environ.setdefault('PLAYWRIGHT_BROWSERS_PATH', '/home/appuser/.cache/ms-playwright')
+    os.environ.setdefault('PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD', '0')
+    
+    # Ensure the cache directory exists
+    cache_dir = '/home/appuser/.cache/ms-playwright'
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir, exist_ok=True)
 
 # Ensure browsers are downloaded
 os.environ.setdefault('PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD', '0')

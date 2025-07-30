@@ -4,18 +4,55 @@ import base64
 from prompts import BROWSER_AUTOMATION_PROMPT
 from config import LLM_MODEL
 import streamlit as st
+from browser_setup import setup_browser_environment, get_browser_profile_args
+import platform
 
 llm = ChatOpenAI(model=LLM_MODEL)
 
+# Setup browser environment with error handling
+try:
+    setup_browser_environment()
+except Exception as e:
+    st.error(f"Browser setup failed: {e}")
+    print(f"Browser setup error: {e}")
+
+# Get browser profile arguments with platform-specific optimizations
+browser_args = get_browser_profile_args()
+
+# Add additional arguments for cloud deployment
+if platform.system() == 'Linux':
+    browser_args.extend([
+        '--disable-dev-shm-usage',
+        '--disable-gpu-sandbox',
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-features=VizDisplayCompositor',
+        '--disable-ipc-flooding-protection',
+        '--single-process',
+        '--no-zygote',
+        '--disable-background-networking',
+        '--disable-default-apps',
+        '--disable-sync',
+        '--disable-translate',
+        '--hide-scrollbars',
+        '--mute-audio',
+        '--no-first-run',
+        '--safebrowsing-disable-auto-update',
+        '--disable-client-side-phishing-detection',
+        '--disable-component-update',
+        '--disable-domain-reliability',
+        '--disable-features=AudioServiceOutOfProcess',
+        '--disable-hang-monitor',
+        '--disable-prompt-on-repost',
+        '--disable-features=TranslateUI'
+    ])
+
 custom_browser_profile = BrowserProfile(
     headless=True, 
-    args=[
-        '--no-sandbox', 
-        '--disable-dev-shm-usage',
-        '--disable-web-security',
-        '--disable-extensions',
-        '--disable-plugins'
-    ],
+    args=browser_args,
     # Set a large window size to ensure full page capture
     window_size={"width": 1920, "height": 1080},
     # Remove viewport constraint to allow full page screenshots
@@ -88,33 +125,34 @@ async def execute_workflow(query):
     # Create agent with simplified configuration
 
     prompt = BROWSER_AUTOMATION_PROMPT.format(prompt=query)
-    agent = Agent(
-        task=prompt,
-        llm=llm,
-        sensitive_data={
-            'https://www.screener.in/': {
-                'email': st.session_state['sensitive_data']['email'],
-                'password': st.session_state['sensitive_data']['password']
-            }
-        },
-
-        browser_profile=custom_browser_profile
-    )
-
-    # Initialize session state for live updates
-    if 'latest_thoughts' not in st.session_state:
-        st.session_state['latest_thoughts'] = ""
-    st.session_state['agent_ran'] = True
-    st.session_state['agent_completed'] = False
-    st.session_state['start_realtime_updates'] = True
     
     try:
+        agent = Agent(
+            task=prompt,
+            llm=llm,
+            sensitive_data={
+                'https://www.screener.in/': {
+                    'email': st.session_state['sensitive_data']['email'],
+                    'password': st.session_state['sensitive_data']['password']
+                }
+            },
+            browser_profile=custom_browser_profile
+        )
+
+        # Initialize session state for live updates
+        if 'latest_thoughts' not in st.session_state:
+            st.session_state['latest_thoughts'] = ""
+        st.session_state['agent_ran'] = True
+        st.session_state['agent_completed'] = False
+        st.session_state['start_realtime_updates'] = True
+        
         result = await agent.run(on_step_start=on_step_start_hook, on_step_end=on_step_end_hook)
         st.session_state['latest_thoughts'] += f"\n\n**Workflow completed successfully!**"
         st.session_state['agent_completed'] = True
         st.session_state['start_realtime_updates'] = False
         st.session_state['final_result'] = result.final_result()
         return result
+        
     except Exception as e:
         st.session_state['latest_thoughts'] += f"\n\n**Error during execution: {str(e)}**"
         st.session_state['agent_error'] = True

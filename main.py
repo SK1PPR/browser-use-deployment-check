@@ -4,6 +4,8 @@
 import streamlit as st
 import asyncio
 import nest_asyncio
+import os
+import platform
 
 # Import our modular components
 from config import *
@@ -13,6 +15,21 @@ from ui_components import UIComponents
 
 # Allow nested async loops
 nest_asyncio.apply()
+
+# Run browser setup for cloud deployment
+if platform.system() == 'Linux':
+    try:
+        from setup_browsers import setup_environment, install_playwright_browsers, verify_installation
+        
+        # Setup environment
+        setup_environment()
+        
+        # Install browsers if not already installed
+        if not verify_installation():
+            print("Installing Playwright browsers...")
+            install_playwright_browsers()
+    except Exception as e:
+        st.error(f"Browser setup failed: {e}")
 
 # Initialize session state
 SessionManager.initialize_session_state()
