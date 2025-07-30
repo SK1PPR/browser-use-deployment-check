@@ -1,26 +1,11 @@
-# Screener.in Workflow Automator - Requirements
-# Core dependencies for the stock screening automation application
-
-# Web Framework
 streamlit>=1.28.0
-
-# Browser Automation
 browser-use>=0.1.0
 playwright>=1.40.0
-
-# Language Models and AI
+playwright-stealth>=1.0.0
 langchain-openai>=0.1.0
 langchain-core>=0.1.0
 openai>=1.0.0
-
-# Environment and Configuration
 python-dotenv>=1.0.0
-
-# Async Support
 nest-asyncio>=1.5.0
-
-# System Utilities
 psutil>=5.9.0
-
-# Data Validation
 pydantic>=2.0.0

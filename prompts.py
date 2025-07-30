@@ -2,33 +2,28 @@
 
 # --------- Step Breakdown Prompt ---------
 STEP_BREAKDOWN_PROMPT = """
-You are a screener automation agent specialized in stock market analysis and financial data extraction. 
-Given the following user request, break it down into 3-8 clear, actionable steps that a browser automation agent can follow.
+You are a screener.in automation agent specialized in stock market analysis and financial data extraction. 
+Given the following user request, break it down into clear, logical steps that a browser automation agent can follow.
 Each step should be specific and executable for stock screening tasks.
 
 User Request: {user_request}
 
 Please format your response as a numbered list of steps. Each step should be clear and actionable for stock screening.
 Example format for stock screening tasks:
-1. Navigate to screener.in and access the stock screener
-2. Set P/E ratio filter to less than 15
-3. Set market cap filter to above 1000cr
-4. Apply filters and view the filtered results
-5. Export or analyze the filtered stock list
+1. Set P/E ratio filter to less than 15
+2. Set market cap filter to above 1000cr
+3. Apply filters and give the filtered results
 
 Focus on steps that involve:
-- Navigating to financial screening websites
 - Setting up filters (P/E ratio, market cap, sector, etc.)
-- Applying filters and viewing results
-- Extracting or analyzing stock data
-- Exporting results if needed
+- Applying filters and giving the results
 
 Steps:
 """
 
 # --------- Step Combination Prompt ---------
 STEP_COMBINATION_PROMPT = """
-You are a screener automation agent. Take the following original request and approved steps, and create a comprehensive, detailed prompt that a browser automation agent can execute.
+You are a screener.in automation agent. Take the following original request and approved steps, and create a comprehensive, detailed prompt that a browser automation agent can execute.
 
 Original Request: {original_request}
 
@@ -41,15 +36,25 @@ Create a detailed, actionable prompt that:
 3. Includes any necessary details about filters, criteria, or actions
 4. Is written in a way that a browser automation agent can understand and execute
 5. Maintains the context of stock screening and financial analysis
-6. Explicitly instructs the agent to keep the browser open and wait for user review
-7. Includes a final step to pause and wait for user confirmation before closing
+6. Focuses ONLY on logical steps and assumes the agent will be able to handle the minor details
+7. Avoids any steps that require human confirmation or judgment
 
-The prompt should be comprehensive enough that the browser agent can execute it without needing additional clarification.
-IMPORTANT: The agent should NOT close the browser automatically. It should keep the browser open for user review.
+IMPORTANT: 
+- Only include steps that can be performed on the actual website
+- Do not include user confirmation prompts or verification steps
+- Focus on concrete logical steps and assumes the agent will be able to handle the minor details
 
 Combined Prompt:
 """
 
+# --------- Browser Automation Prompt ---------
+BROWSER_AUTOMATION_PROMPT = """
+You are a screener.in automation agent. Take the following prompt and execute it.
+
+Prompt: {prompt}
+
+Execute the prompt and give the results.
+"""
 # --------- Authentication Messages ---------
 LOGIN_WELCOME = "🔐 Welcome to Screener.in Workflow Automator"
 LOGIN_INSTRUCTIONS = "Please log in to access the stock screening automation system."
@@ -96,6 +101,10 @@ BROWSER_KEEP_OPEN = "The browser will remain open so you can review the results.
 WORKFLOW_STARTING = "🚀 Starting workflow execution..."
 EXECUTION_PROMPT_TITLE = "📋 Execution Prompt (Generated from Steps)"
 EXECUTION_PROMPT_DESCRIPTION = "This is the comprehensive prompt that will be sent to the browser automation agent."
+FINAL_RESULTS_TITLE = "📊 Final Results"
+FINAL_RESULTS_HEADER = "Agent's Final Output"
+FINAL_SCREENSHOT_CAPTION = "Final State"
+VIEW_FINAL_RESULTS = "View Final Results"
 
 # --------- Error Messages ---------
 ERROR_BREAKDOWN = "Error breaking down prompt: {error}"

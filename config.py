@@ -14,14 +14,7 @@ INITIAL_SIDEBAR_STATE = "collapsed"
 # --------- LLM Configuration ---------
 LLM_MODEL = "gpt-4o"
 
-# --------- Initial Actions ---------
-INITIAL_ACTIONS = [
-    {
-        'open_tab': {
-            'url': 'https://screener.in/',
-        }
-    }
-]
+
 
 # --------- File Paths ---------
 SCREENSHOTS_DIR = 'screenshots'
@@ -34,6 +27,9 @@ SESSION_KEYS = {
     'login_error': "",
     'latest_thoughts': "",
     'agent_ran': False,
+    'agent_completed': False,
+    'final_result': "",
+    'start_realtime_updates': False,
     'credentials_configured': False,
     'sensitive_data': {},
     'workflow_steps': [],
@@ -59,6 +55,25 @@ COLUMN_RATIOS = {
 def get_env_var(key, default=None):
     """Get environment variable with fallback to default."""
     return os.getenv(key, default)
+
+# Set Playwright environment variables for cloud deployment
+# Use platform-agnostic paths that work on both local and cloud deployments
+import platform
+
+# For cloud deployment, let Playwright use its default paths
+# For local development, we can optionally set a custom path
+if platform.system() == 'Darwin':  # macOS
+    # Only set custom path for local development if it exists
+    local_cache_path = '/Users/khushalagrawal/Library/Caches/ms-playwright'
+    if os.path.exists(local_cache_path):
+        os.environ.setdefault('PLAYWRIGHT_BROWSERS_PATH', local_cache_path)
+else:
+    # On cloud deployments (Linux), use default paths
+    # Let Playwright manage its own browser installation
+    pass
+
+# Ensure browsers are downloaded
+os.environ.setdefault('PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD', '0')
 
 # --------- Debug Configuration ---------
 DEBUG_MODE = get_env_var('DEBUG_MODE', 'False').lower() == 'true'

@@ -3,6 +3,7 @@
 import streamlit as st
 import os
 import asyncio
+import time
 from prompts import *
 from config import COLUMN_RATIOS, APP_TITLE, get_env_var
 from browser import execute_workflow, cleanup_screenshots
@@ -310,6 +311,9 @@ class UIComponents:
                 st.session_state['workflow_approved'] = False
                 st.session_state['current_prompt'] = ""
                 st.session_state['agent_ran'] = False
+                st.session_state['agent_completed'] = False
+                st.session_state['final_result'] = ""
+                st.session_state['start_realtime_updates'] = False
                 st.session_state['latest_thoughts'] = ""
                 st.session_state['show_workflow_view'] = False
                 st.session_state['edited_steps'] = []
@@ -329,7 +333,7 @@ class UIComponents:
         
         # Show the combined execution prompt
         if st.session_state.get('combined_prompt'):
-            with st.expander(EXECUTION_PROMPT_TITLE, expanded=True):
+            with st.expander(EXECUTION_PROMPT_TITLE, expanded=False):
                 st.markdown("**Combined Prompt for Browser Agent:**")
                 st.text_area("", value=st.session_state['combined_prompt'], height=150, disabled=True)
                 st.info(EXECUTION_PROMPT_DESCRIPTION)
@@ -338,6 +342,9 @@ class UIComponents:
             if st.button(EXECUTE_WORKFLOW_BUTTON, type="primary", use_container_width=True):
                 # Reset state for new run
                 st.session_state['agent_ran'] = False
+                st.session_state['agent_completed'] = False
+                st.session_state['final_result'] = ""
+                st.session_state['start_realtime_updates'] = False
                 st.session_state['agent_error'] = False
                 st.session_state['latest_thoughts'] = ''
                 st.session_state['step_counter'] = {'n': 0}
@@ -345,14 +352,20 @@ class UIComponents:
                 # Clean up screenshots
                 cleanup_screenshots()
                 
-                # Show initial status
-                st.info(WORKFLOW_STARTING)
+                # Set flag to start real-time updates
+                st.session_state['start_realtime_updates'] = True
                 
                 # Use the combined prompt for execution
                 execution_prompt = st.session_state.get('combined_prompt', st.session_state['current_prompt'])
                 
                 # Run agent with timeout protection
                 asyncio.run(execute_workflow(execution_prompt))
+
+        # Real-time update logic - use auto-rerun when agent is running
+        if st.session_state.get('agent_ran', False) and not st.session_state.get('agent_completed', False):
+            # Auto-rerun every 2 seconds to show live updates
+            time.sleep(2)
+            st.rerun()
 
         col1, col2 = st.columns(COLUMN_RATIOS['workflow'])
 
@@ -365,33 +378,60 @@ class UIComponents:
                 with st.expander("Agent's Live Actions", expanded=True):
                     st.markdown(st.session_state['latest_thoughts'])
                     
-                    # Show current status
-                    if st.session_state.get('agent_ran', False):
+                    # Show current status only when agent is running and not completed
+                    if st.session_state.get('agent_ran', False) and not st.session_state.get('agent_completed', False):
                         current_step = st.session_state.get('step_counter', {}).get('n', 0)
-                        st.success(f"🔄 Agent is currently running... (Step {current_step})")
+                        screenshots_count = len(st.session_state.get('screenshots', []))
+                        
+                        # Show progress bar
+                        if current_step > 0:
+                            progress_text = f"🔄 Agent is currently running... (Step {current_step}, Screenshots: {screenshots_count})"
+                            st.success(progress_text)
+                            
+                            # Show a simple progress indicator
+                            progress = min(current_step / max(current_step, 1), 1.0)
+                            st.progress(progress, text=f"Progress: Step {current_step}")
+                        else:
+                            st.info("🔄 Agent is starting... Actions will appear here as they happen.")
             else:
-                st.info("Agent actions will appear here as they happen.")
+                if st.session_state.get('agent_ran', False) and not st.session_state.get('agent_completed', False):
+                    st.info("🔄 Agent is starting... Actions will appear here as they happen.")
+                    st.progress(0, text="Initializing agent...")
+                else:
+                    st.info("Agent actions will appear here as they happen.")
 
         # Right Column - Browser Screenshot
         with col2:
             st.subheader(BROWSER_SCREENSHOT_HEADER)
-            st.info("Run the agent to generate a screenshot.")
-
-            # After agent completes, show a slider to browse all screenshots
-            if st.session_state.get('agent_ran', False):
-                screenshots_dir = 'screenshots'
-                if os.path.exists(screenshots_dir):
-                    screenshots = sorted([f for f in os.listdir(screenshots_dir) if f.startswith('step_') and f.endswith('.png')])
-                    if screenshots:
-                        step_numbers = [int(s.split('_')[1].split('.')[0]) for s in screenshots]
-                        selected_step = st.slider("Select Step", min_value=min(step_numbers), max_value=max(step_numbers), value=max(step_numbers))
-                        selected_screenshot = f'step_{selected_step}.png'
-                        screenshot_path = os.path.join(screenshots_dir, selected_screenshot)
-                        if os.path.exists(screenshot_path):
-                            with open(screenshot_path, 'rb') as f:
-                                img_bytes = f.read()
-                            st.image(img_bytes, caption=f"Step {selected_step} Screenshot", use_container_width=True)
-                        else:
-                            st.warning(f"Screenshot for step {selected_step} not found.")
-                    else:
-                        st.info("No screenshots found.") 
+            
+            # Show screenshots in real-time as they're captured
+            screenshots = st.session_state.get('screenshots', [])
+            if screenshots:    
+                # If there are multiple screenshots, show a slider below to browse them
+                if len(screenshots) > 1:
+                    st.markdown("**Browse Steps:**")
+                    step_numbers = list(range(1, len(screenshots) + 1))
+                    selected_step = st.slider("Select Step", min_value=1, max_value=len(screenshots), value=len(screenshots))
+                    if selected_step != len(screenshots):  # Don't show the same image twice
+                        selected_screenshot = screenshots[selected_step - 1]
+                        st.image(selected_screenshot, caption=f"Step {selected_step} Screenshot", use_container_width=True)
+            else:
+                if st.session_state.get('agent_ran', False) and not st.session_state.get('agent_completed', False):
+                    st.info("Agent is running... Screenshots will appear here as steps are completed.")
+                    # Show a spinner to indicate activity
+                    with st.spinner("Capturing screenshots..."):
+                        st.empty()
+                else:
+                    st.info("Run the agent to generate screenshots.")
+        
+        # Final Results Section - Show at bottom when agent completes
+        if st.session_state.get('agent_completed', False) and st.session_state.get('final_result'):
+            st.markdown("---")
+            st.subheader(FINAL_RESULTS_TITLE)
+            
+            # Display the final result
+            final_result = st.session_state.get('final_result', "")
+            if final_result:
+                with st.expander(VIEW_FINAL_RESULTS, expanded=True):
+                    st.markdown(f"**{FINAL_RESULTS_HEADER}:**")
+                    st.write(final_result)
